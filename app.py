@@ -226,6 +226,64 @@ def dashboard_data():
     except Exception as e:
         print("Error in /dashboard_data:", str(e))
         return jsonify({"error": str(e)}), 500
+        # ---------------------------
+# Get All Stock
+# ---------------------------
+@app.route('/get_all_stock', methods=['GET'])
+def get_all_stock():
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM stock ORDER BY design_name ASC")
+        rows = cursor.fetchall()
+        conn.close()
+        return jsonify(rows)
+    except Exception as e:
+        print("Error in /get_all_stock:", str(e))
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------
+# Add Stock Item
+# ---------------------------
+@app.route('/add_stock', methods=['POST'])
+def add_stock():
+    try:
+        data = request.get_json()
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO stock (design_name, type, size, stock, unit_price) VALUES (?, ?, ?, ?, ?)",
+            (data['design_name'], data['type'], data['size'], data['stock'], data['unit_price'])
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Stock added successfully!"})
+    except Exception as e:
+        print("Error in /add_stock:", str(e))
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------
+# Update Stock
+# ---------------------------
+@app.route('/update_stock/<int:stock_id>', methods=['PUT'])
+def update_stock(stock_id):
+    try:
+        data = request.get_json()
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE stock SET design_name=?, type=?, size=?, stock=?, unit_price=? WHERE id=?",
+            (data['design_name'], data['type'], data['size'], data['stock'], data['unit_price'], stock_id)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Stock updated successfully!"})
+    except Exception as e:
+        print("Error in /update_stock:", str(e))
+        return jsonify({"error": str(e)}), 500
+
 
 
 if __name__ == '__main__':
