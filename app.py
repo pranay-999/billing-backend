@@ -119,5 +119,71 @@ def initialize_stock():
 # call function when app starts
 initialize_stock()
 
+# ---------------------------
+# Update Sale
+# ---------------------------
+@app.route('/update_sale/<int:bill_id>', methods=['PUT'])
+def update_sale(bill_id):
+    try:
+        data = request.get_json()
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        design_name = data.get("design_name")
+        type_ = data.get("type")
+        size = data.get("size")
+        boxes_sold = int(data.get("boxes_sold"))
+        unit_price = float(data.get("unit_price"))
+        gst_mode = data.get("gst_mode", "exclusive")
+
+        base_amount = unit_price * boxes_sold
+
+        if gst_mode == "exclusive":
+            cgst = base_amount * 0.09
+            sgst = base_amount * 0.09
+            final_amount = base_amount + cgst + sgst
+        elif gst_mode == "inclusive":
+            base = base_amount / 1.18
+            cgst = base * 0.09
+            sgst = base * 0.09
+            final_amount = base_amount
+        else:
+            cgst = sgst = 0
+            final_amount = base_amount
+
+        cursor.execute(
+            """
+            UPDATE sales 
+            SET design_name=?, type=?, size=?, boxes_sold=?, unit_price=?, amount=?, gst_type=?, cgst=?, sgst=?, final_amount=? 
+            WHERE bill_id=?
+            """,
+            (design_name, type_, size, boxes_sold, unit_price, base_amount, gst_mode, cgst, sgst, final_amount, bill_id)
+        )
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Sale updated successfully!"})
+    except Exception as e:
+        print("Error updating sale:", str(e))
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------
+# Delete Sale
+# ---------------------------
+@app.route('/delete_sale/<int:bill_id>', methods=['DELETE'])
+def delete_sale(bill_id):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sales WHERE bill_id=?", (bill_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Sale deleted successfully!"})
+    except Exception as e:
+        print("Error deleting sale:", str(e))
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
