@@ -43,42 +43,52 @@ def get_stock(design_name):
 # Add a sale entry with GST logic
 @app.route('/add_sale', methods=['POST'])
 def add_sale():
-    data = request.get_json()
-    design_name = data.get('design_name')
-    boxes_sold = data.get('boxes_sold')
-    unit_price = data.get('unit_price')
-    gst_mode = data.get('gst_mode')  # "exclusive" or "inclusive"
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON received"}), 400
 
-    base_amount = unit_price * boxes_sold
+        design_name = data.get('design_name')
+        boxes_sold = data.get('boxes_sold')
+        unit_price = data.get('unit_price')
+        gst_mode = data.get('gst_mode')
 
-    if gst_mode == "exclusive":
-        cgst = base_amount * 0.09
-        sgst = base_amount * 0.09
-        final_amount = base_amount + cgst + sgst
-    elif gst_mode == "inclusive":
-        base = base_amount / 1.18
-        cgst = base * 0.09
-        sgst = base * 0.09
-        final_amount = base_amount
-    else:
-        cgst = sgst = 0
-        final_amount = base_amount
+        if not design_name or not unit_price or not boxes_sold:
+            return jsonify({"error": "Missing required fields"}), 400
 
-    # Save in database
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO sales (design_name, type, size, boxes_sold, unit_price, amount, gst_type, cgst, sgst, final_amount)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        design_name, data.get('type'), data.get('size'),
-        boxes_sold, unit_price, base_amount, gst_mode,
-        cgst, sgst, final_amount
-    ))
-    conn.commit()
-    conn.close()
+        base_amount = float(unit_price) * int(boxes_sold)
 
-    return jsonify({"message": "Sale added successfully!", "final_amount": final_amount})
+        if gst_mode == "exclusive":
+            cgst = base_amount * 0.09
+            sgst = base_amount * 0.09
+            final_amount = base_amount + cgst + sgst
+        elif gst_mode == "inclusive":
+            base = base_amount / 1.18
+            cgst = base * 0.09
+            sgst = base * 0.09
+            final_amount = base_amount
+        else:
+            cgst = sgst = 0
+            final_amount = base_amount
+
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO sales (design_name, type, size, boxes_sold, unit_price, amount, gst_type, cgst, sgst, final_amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            design_name, data.get('type'), data.get('size'),
+            boxes_sold, unit_price, base_amount, gst_mode,
+            cgst, sgst, final_amount
+        ))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Sale added successfully!", "final_amount": final_amount})
+    except Exception as e:
+        print("Error in /add_sale:", str(e))
+        return jsonify({"error": str(e)}), 500
+
 
 # Get all sales
 @app.route('/get_sales', methods=['GET'])
