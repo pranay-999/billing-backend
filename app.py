@@ -284,6 +284,32 @@ def update_stock(stock_id):
         print("Error in /update_stock:", str(e))
         return jsonify({"error": str(e)}), 500
 
+# ---------------------------
+# Sync Sales Data to Stock Table
+# ---------------------------
+@app.route('/sync_stock', methods=['POST'])
+def sync_stock():
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT design_name, type, size, unit_price FROM sales")
+        sales_data = cursor.fetchall()
+
+        added = 0
+        for s in sales_data:
+            cursor.execute("SELECT * FROM stock WHERE design_name=?", (s[0],))
+            if not cursor.fetchone():
+                cursor.execute(
+                    "INSERT INTO stock (design_name, type, size, stock, unit_price) VALUES (?, ?, ?, ?, ?)",
+                    (s[0], s[1], s[2], 0, s[3])
+                )
+                added += 1
+        conn.commit()
+        conn.close()
+        return jsonify({"message": f"Stock synced successfully! Added {added} new items."})
+    except Exception as e:
+        print("Error syncing stock:", str(e))
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
