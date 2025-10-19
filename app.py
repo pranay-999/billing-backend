@@ -86,5 +86,28 @@ def get_sales():
     result = query_db("SELECT * FROM sales ORDER BY date DESC")
     return jsonify(result)
 
+# --- Initialize Database with Sample Stock if Empty ---
+def initialize_stock():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM stock")
+    count = cursor.fetchone()[0]
+    if count == 0:
+        print("Inserting default stock data...")
+        items = [
+            ("Galaxy White", "Tile", "2x2", 100, 45.0),
+            ("Aqua Blue", "Sanitary", "Medium", 50, 120.0),
+            ("Marble Gloss", "Tile", "1x1", 80, 65.0)
+        ]
+        cursor.executemany(
+            "INSERT INTO stock (design_name, type, size, stock, unit_price) VALUES (?, ?, ?, ?, ?)",
+            items
+        )
+        conn.commit()
+    conn.close()
+
+# call function when app starts
+initialize_stock()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
