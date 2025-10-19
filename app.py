@@ -184,6 +184,49 @@ def delete_sale(bill_id):
         print("Error deleting sale:", str(e))
         return jsonify({"error": str(e)}), 500
 
+# ---------------------------
+# Dashboard Data
+# ---------------------------
+@app.route('/dashboard_data', methods=['GET'])
+def dashboard_data():
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        # Total Sales Amount
+        cursor.execute("SELECT SUM(final_amount) FROM sales")
+        total_sales = cursor.fetchone()[0] or 0
+
+        # Total GST (CGST + SGST)
+        cursor.execute("SELECT SUM(cgst + sgst) FROM sales")
+        total_gst = cursor.fetchone()[0] or 0
+
+        # Number of Bills
+        cursor.execute("SELECT COUNT(*) FROM sales")
+        total_bills = cursor.fetchone()[0] or 0
+
+        # Top Selling Products
+        cursor.execute("""
+            SELECT design_name, SUM(boxes_sold) as total_qty
+            FROM sales
+            GROUP BY design_name
+            ORDER BY total_qty DESC
+            LIMIT 5
+        """)
+        top_products = cursor.fetchall()
+
+        conn.close()
+
+        return jsonify({
+            "total_sales": total_sales,
+            "total_gst": total_gst,
+            "total_bills": total_bills,
+            "top_products": [{"design": t[0], "qty": t[1]} for t in top_products]
+        })
+    except Exception as e:
+        print("Error in /dashboard_data:", str(e))
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
