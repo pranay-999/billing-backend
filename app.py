@@ -246,23 +246,42 @@ def get_all_stock():
 # ---------------------------
 # Add Stock Item
 # ---------------------------
+# ---------------------------
+# Add or Update Stock Item
+# ---------------------------
 @app.route('/add_stock', methods=['POST'])
 def add_stock():
     try:
         data = request.get_json()
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO stock (design_name, type, size, stock, unit_price) VALUES (?, ?, ?, ?, ?)",
-            (data['design_name'], data['type'], data['size'], data['stock'], data['unit_price'])
-        )
+
+        # Check if design already exists
+        cursor.execute("SELECT * FROM stock WHERE design_name=?", (data['design_name'],))
+        existing = cursor.fetchone()
+
+        if existing:
+            # Update existing stock item
+            cursor.execute("""
+                UPDATE stock
+                SET type=?, size=?, stock=?, unit_price=?
+                WHERE design_name=?
+            """, (data['type'], data['size'], data['stock'], data['unit_price'], data['design_name']))
+            message = f"Updated existing stock: {data['design_name']}"
+        else:
+            # Insert new stock item
+            cursor.execute("""
+                INSERT INTO stock (design_name, type, size, stock, unit_price)
+                VALUES (?, ?, ?, ?, ?)
+            """, (data['design_name'], data['type'], data['size'], data['stock'], data['unit_price']))
+            message = f"Added new stock: {data['design_name']}"
+
         conn.commit()
         conn.close()
-        return jsonify({"message": "Stock added successfully!"})
+        return jsonify({"message": message})
     except Exception as e:
         print("Error in /add_stock:", str(e))
         return jsonify({"error": str(e)}), 500
-
 
 # ---------------------------
 # Update Stock
