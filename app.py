@@ -287,7 +287,7 @@ def update_stock(stock_id):
 # ---------------------------
 # Sync Sales Data to Stock Table
 # ---------------------------
-@app.route('/sync_stock', methods=['POST'])
+@app.route('/sync_stock', methods=['GET'])
 def sync_stock():
     try:
         conn = sqlite3.connect(DB_NAME)
