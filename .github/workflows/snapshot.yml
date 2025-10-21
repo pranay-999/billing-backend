@@ -1,0 +1,23 @@
+name: Auto Backend Snapshot
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Generate backend snapshot
+        run: python snapshot_generator_backend.py
+      - name: Commit and push snapshot
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "actions@github.com"
+          git add backend_snapshot.json backend_snapshot.zip snapshot_history.json || true
+          git commit -m "Auto update backend snapshot [skip ci]" || echo "No changes"
+          git push
