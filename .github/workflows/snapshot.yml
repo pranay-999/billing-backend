@@ -1,25 +1,43 @@
-name: Auto Backend Snapshot
+name: Auto Project Snapshot
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 👈 this gives GitHub Action permission to push commits
 
 jobs:
   snapshot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
-      - name: Generate backend snapshot
-        run: python snapshot_generator_backend.py
+      - name: Install dependencies (optional safety)
+        run: pip install --upgrade pip
 
-      - name: Commit and push snapshot
+      - name: Generate snapshot
+        run: |
+          if [ -f snapshot_generator_frontend.py ]; then
+            echo "Running frontend snapshot generator..."
+            python snapshot_generator_frontend.py
+          elif [ -f snapshot_generator_backend.py ]; then
+            echo "Running backend snapshot generator..."
+            python snapshot_generator_backend.py
+          else
+            echo "❌ No snapshot generator found"
+            exit 1
+          fi
+
+      - name: Auto-commit generated snapshot files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto update backend snapshot [skip ci]"
+          commit_message: "Auto update project snapshot [skip ci]"
           branch: main
